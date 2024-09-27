@@ -1,0 +1,241 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科技感倒计时器</title>
+    <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&amp;family=Orbitron:wght@400;700&amp;display=swap" rel="stylesheet">
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: 'Share Tech Mono', monospace;
+            background-color: #000;
+            color: #0f0;
+            overflow: hidden;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+        }
+        #clock {
+            font-size: 15vw;
+            text-shadow: 0 0 10px #0f0;
+            width: 80%;
+            text-align: center;
+        }
+        .buttons {
+            display: flex;
+            justify-content: center;
+            width: 70%;
+            margin-top: 20px;
+        }
+        button {
+            background: linear-gradient(145deg, #002200, #001a00);
+            border: 1px solid #0f0;
+            color: #0f0;
+            padding: 8px 0;
+            cursor: pointer;
+            font-size: 0.7vw; /* 减小字体大小 */
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 6px rgba(0, 255, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            flex: 0 1 calc(8.4% - 20px);
+            margin: 0 10px;
+            text-align: center;
+            font-family: 'Orbitron', sans-serif; /* 更改字体 */
+            font-weight: 600; /* 加粗字体 */
+            text-transform: uppercase; /* 将文字转换为大写 */
+            letter-spacing: 1px; /* 增加字母间距 */
+            position: relative;
+            overflow: hidden;
+        }
+        button::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(0, 255, 0, 0.1) 0%, rgba(0, 255, 0, 0) 70%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        button:hover::before {
+            opacity: 1;
+        }
+        button:hover {
+            background: linear-gradient(145deg, #003300, #002200);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 255, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2),
+                        0 0 15px rgba(0, 255, 0, 0.5);
+        }
+        button:active {
+            background: linear-gradient(145deg, #001a00, #002200);
+            transform: translateY(1px);
+            box-shadow: 0 2px 4px rgba(0, 255, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        }
+        #customTimer {
+            display: none;
+            margin-top: 20px;
+        }
+        input {
+            background-color: transparent;
+            border: 1px solid #0f0;
+            color: #0f0;
+            padding: 5px;
+            width: 50px;
+            font-size: 16px;
+            font-family: 'Orbitron', sans-serif;
+        }
+        @keyframes blink {
+            0% { color: #0f0; }
+            50% { color: #f00; }
+            100% { color: #0f0; }
+        }
+        .blinking {
+            animation: blink 1s infinite;
+        }
+        #signature {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            font-size: 12px;
+            opacity: 0.7;
+            font-family: 'Orbitron', sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="clock">00:00:00</div>
+        <div class="buttons">
+            <button onclick="setTimer(2)">2Min</button>
+            <button onclick="setTimer(5)">5Min</button>
+            <button onclick="setTimer(8)">8Min</button>
+            <button onclick="setTimer(10)">10Min</button>
+            <button onclick="toggleCustomTimer()">custom</button>
+            <button id="pauseButton" onclick="togglePause()">PAUSE</button>
+            <button onclick="resetClock()">CLOCK</button>
+        </div>
+        <div id="customTimer">
+            <input type="number" id="hours" min="0" max="23" value="0">
+            <label for="hours">:</label>
+            <input type="number" id="minutes" min="0" max="59" value="0">
+            <label for="minutes">:</label>
+            <input type="number" id="seconds" min="0" max="59" value="0">
+            <label for="seconds"></label>
+            <button onclick="startCustomTimer()"> &#x25B6;</button>
+        </div>
+    </div>
+    <div id="signature">Designed by Martinlu</div>
+
+    <script>
+        // JavaScript 代码保持不变
+        let timer;
+        let totalSeconds = 0;
+        let isRunning = false;
+        let isPaused = false;
+        let isCountdownMode = false;
+
+        function updateClockDisplay() {
+            if (isCountdownMode) {
+                updateTimerDisplay();
+            } else {
+                const now = new Date();
+                const hours = now.getHours().toString().padStart(2, '0');
+                const minutes = now.getMinutes().toString().padStart(2, '0');
+                const seconds = now.getSeconds().toString().padStart(2, '0');
+                document.getElementById('clock').textContent = `${hours}:${minutes}:${seconds}`;
+            }
+        }
+
+        function updateTimerDisplay() {
+            const hours = Math.floor(totalSeconds / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = totalSeconds % 60;
+            document.getElementById('clock').textContent = 
+                `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        }
+
+        function startTimer() {
+            if (isRunning && !isPaused) return;
+            isRunning = true;
+            isCountdownMode = true;
+            isPaused = false;
+            updatePauseButton();
+            timer = setInterval(() => {
+                if (totalSeconds > 0) {
+                    totalSeconds--;
+                    updateTimerDisplay();
+                } else {
+                    clearInterval(timer);
+                    isRunning = false;
+                    document.getElementById('clock').classList.add('blinking');
+                    document.addEventListener('click', stopBlinking);
+                }
+            }, 1000);
+        }
+
+        function stopBlinking() {
+            document.getElementById('clock').classList.remove('blinking');
+            document.removeEventListener('click', stopBlinking);
+            resetClock();
+        }
+
+        function togglePause() {
+            if (isRunning) {
+                if (isPaused) {
+                    startTimer();
+                } else {
+                    clearInterval(timer);
+                    isPaused = true;
+                }
+                updatePauseButton();
+            }
+        }
+
+        function updatePauseButton() {
+            const pauseButton = document.getElementById('pauseButton');
+            pauseButton.textContent = isPaused ? ">" : "II";
+        }
+
+        function setTimer(minutes) {
+            totalSeconds = minutes * 60;
+            updateTimerDisplay();
+            startTimer();
+        }
+
+        function toggleCustomTimer() {
+            const customTimer = document.getElementById('customTimer');
+            customTimer.style.display = customTimer.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function startCustomTimer() {
+            const hours = parseInt(document.getElementById('hours').value) || 0;
+            const minutes = parseInt(document.getElementById('minutes').value) || 0;
+            const seconds = parseInt(document.getElementById('seconds').value) || 0;
+            totalSeconds = hours * 3600 + minutes * 60 + seconds;
+            updateTimerDisplay();
+            startTimer();
+            toggleCustomTimer();
+        }
+
+        function resetClock() {
+            clearInterval(timer);
+            isRunning = false;
+            isCountdownMode = false;
+            isPaused = false;
+            updatePauseButton();
+            updateClockDisplay();
+            setInterval(updateClockDisplay, 1000);
+        }
+
+        // 初始化时钟
+        resetClock();
+    </script>
+
+
+</body></html>
